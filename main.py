@@ -1,50 +1,38 @@
+import yaml
 import sys
+import subprocess
 
-class TaskmasterCLI:
-    def __init__(self):
-        self.running = True
-        self.commands = {
-            'start': self.start,
-            'stop': self.stop,
-            'status': self.status,
-            'exit': self.exit,
-            'help': self.help,
-        }
+class Taskmaster:
+    def __init__(self, config_path):
+        self.processes = {}
+        self.load_config(config_path)
 
-    def run(self):
-        while self.running:
-            try:
-                user_input = input("taskmaster> ").strip()
-                if not user_input:
-                    continue
-                parts = user_input.split()
-                command = parts[0]
-                args = parts[1:]
-
-                if command in self.commands:
-                    self.commands[command](args)
+    def load_config(self, path):
+        with open(path, 'r') as f:
+            config = yaml.safe_load(f)
+            programs = config.get("programs", {})
+            for name, settings in programs.items():
+                cmd = settings.get("cmd")
+                autostart = settings.get("autostart", False)
+                if cmd and autostart:
+                    print(f"[INFO] Autostarting '{name}' -> {cmd}")
+                    process = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.processes[name] = process
                 else:
-                    print(f"Unknown command: {command}. Type 'help' for a list.")
-            except (EOFError, KeyboardInterrupt):
-                print("\nExiting Taskmaster.")
-                self.running = False
+                    print(f"[SKIP] '{name}' not started (autostart={autostart})")
 
-    def start(self, args):
-        print(f"[start] Called with args: {args}")
-
-    def stop(self, args):
-        print(f"[stop] Called with args: {args}")
-
-    def status(self, args):
-        print("[status] Showing status of processes (not implemented yet).")
-
-    def exit(self, args):
-        print("Goodbye!")
-        self.running = False
-
-    def help(self, args):
-        print("Available commands: start, stop, status, exit, help")
+    def status(self):
+        print("=== Process status ===")
+        for name, proc in self.processes.items():
+            if proc.poll() is None:
+                print(f"{name}: RUNNING (pid={proc.pid})")
+            else:
+                print(f"{name}: STOPPED")
 
 if __name__ == "__main__":
-    cli = TaskmasterCLI()
-    cli.run()
+    if len(sys.argv) != 2:
+        print("Usage: python3 taskmaster.py config.yaml")
+        sys.exit(1)
+
+    tm = Taskmaster(sys.argv[1])
+    tm.status()
