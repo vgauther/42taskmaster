@@ -1,0 +1,4 @@
+programs:
+  tail-toto:
+    cmd: tail -f /tmp/toto
+    autostart: true
