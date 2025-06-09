@@ -31,6 +31,7 @@ class Taskmaster:
                     name, idx = key.split(":")
                     settings = self.config["programs"][name]
                     exitcodes = settings.get("exitcodes", [0])
+                    print(exitcodes)
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
 
