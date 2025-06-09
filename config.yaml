@@ -1,4 +1,5 @@
 programs:
-  tail-toto:
-    cmd: tail -f /tmp/toto
+  tail_toto:
+    cmd: "tail -f /tmp/toto"
+    numprocs: 3
     autostart: true
