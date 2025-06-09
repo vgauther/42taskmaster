@@ -1,8 +1,10 @@
+
 programs:
   myprog:
-    cmd: "tail -f /tmp/toto"
-    autorestart: "always"
-    exitcodes: [0, 1]
-    startretries: 3
-    autostart: true
+    cmd: "sleep 3"
     numprocs: 1
+    autorestart: "always"
+    startsecs: 2
+    autostart: true
+    startretries: 3
+    exitcodes: [0, 1]

@@ -31,7 +31,6 @@ class Taskmaster:
                     name, idx = key.split(":")
                     settings = self.config["programs"][name]
                     exitcodes = settings.get("exitcodes", [0])
-                    print(exitcodes)
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
 
@@ -73,28 +72,50 @@ class Taskmaster:
         if not args:
             print("Usage: start <program>")
             return
+
         name = args[0]
         settings = self.config["programs"].get(name)
+
         if not settings:
             print(f"[ERROR] Program '{name}' not found.")
             return
 
         cmd = settings["cmd"]
         numprocs = settings.get("numprocs", 1)
+        startsecs = settings.get("startsecs", 0)
 
         for i in range(numprocs):
             key = f"{name}:{i}"
+
+            # Vérifie si le processus tourne déjà
             if key in self.processes and self.processes[key].poll() is None:
                 print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
                 continue
+
             try:
-                proc = subprocess.Popen(shlex.split(cmd),
-                                        stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL)
+                # Démarre le processus
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
+
+                # Attente pour valider que le process reste en vie
+                time.sleep(startsecs)
+
+                # Vérifie si le process est encore actif
+                if proc.poll() is not None:
+                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                    continue
+
+                # Ajoute le process à la liste s'il est OK
                 self.processes[key] = proc
-                print(f"[START] {key} started (pid={proc.pid})")
+                print(f"[OK] {key} is now running (pid={proc.pid})")
+
             except Exception as e:
                 print(f"[ERROR] Failed to start '{key}': {e}")
+
 
     def stop(self, args):
         if not args:
