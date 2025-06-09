@@ -4,7 +4,7 @@ programs:
     cmd: "sleep 3"
     numprocs: 1
     autorestart: "never"
-    startsecs: "6"
+    startsecs: 6
     autostart: true
     startretries: 3
     exitcodes: [42]
