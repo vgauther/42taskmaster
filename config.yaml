@@ -3,7 +3,7 @@ programs:
   myprog:
     cmd: "sleep 3"
     numprocs: 1
-    autorestart: "never"
+    autorestart: "always"
     startsecs: 6
     autostart: true
     startretries: 3
