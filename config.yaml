@@ -1,5 +1,6 @@
 programs:
-  tail_toto:
+  myprog:
     cmd: "tail -f /tmp/toto"
-    numprocs: 3
-    autostart: true
+    autorestart: "unexpected"
+    exitcodes: [0, 1]
+    startretries: 3

@@ -4,6 +4,8 @@ import subprocess
 import shlex
 import os
 import signal
+import threading
+import time
 
 class Taskmaster:
     def __init__(self, config_path):
@@ -11,6 +13,7 @@ class Taskmaster:
         self.processes = {}  # Clé : "name:index", Valeur : Popen
         self.config = {}
         self.load_config()
+        threading.Thread(target=self.monitor_processes, daemon=True).start()
 
     def load_config(self):
         with open(self.config_path, 'r') as f:
@@ -19,6 +22,51 @@ class Taskmaster:
             for name, settings in programs.items():
                 if settings.get("autostart", False):
                     self.start([name])
+
+    def monitor_processes(self):
+        while True:
+            for key in list(self.processes.keys()):
+                proc = self.processes[key]
+                if proc.poll() is not None:  # Process is terminated
+                    name, idx = key.split(":")
+                    settings = self.config["programs"][name]
+                    exitcodes = settings.get("exitcodes", [0])
+                    autorestart = settings.get("autorestart", "never")
+                    retries = settings.get("startretries", 0)
+
+                    should_restart = False
+                    if autorestart == "always":
+                        should_restart = True
+                    elif autorestart == "unexpected":
+                        if proc.returncode not in exitcodes:
+                            should_restart = True
+
+                    if should_restart:
+                        if retries > 0:
+                            for attempt in range(retries):
+                                try:
+                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                                stdout=subprocess.DEVNULL,
+                                                                stderr=subprocess.DEVNULL)
+                                    self.processes[key] = new_proc
+                                    print(f"[RESTART] {key} (pid={new_proc.pid})")
+                                    break
+                                except Exception as e:
+                                    print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
+                                    time.sleep(1)
+                        else:
+                            try:
+                                new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                            stdout=subprocess.DEVNULL,
+                                                            stderr=subprocess.DEVNULL)
+                                self.processes[key] = new_proc
+                                print(f"[RESTART] {key} (pid={new_proc.pid})")
+                            except Exception as e:
+                                print(f"[ERROR] Failed to restart {key}: {e}")
+                    else:
+                        print(f"[INFO] {key} exited with code {proc.returncode}")
+                        del self.processes[key]
+            time.sleep(1)
 
     def start(self, args):
         if not args:
