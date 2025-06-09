@@ -3,8 +3,8 @@ programs:
   myprog:
     cmd: "sleep 3"
     numprocs: 1
-    autorestart: "always"
-    startsecs: 2
+    autorestart: "never"
+    startsecs: "6"
     autostart: true
     startretries: 3
-    exitcodes: [0, 1]
+    exitcodes: [42]
