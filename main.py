@@ -94,54 +94,56 @@ class Taskmaster:
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
             time.sleep(1)
-            
+
     def start(self, args):
-        if not args:
-            print("Usage: start <program>")
-            return
+    if not args:
+        print("Usage: start <program>")
+        return
 
-        name = args[0]
-        settings = self.config["programs"].get(name)
+    name = args[0]
+    settings = self.config["programs"].get(name)
 
-        if not settings:
-            print(f"[ERROR] Program '{name}' not found.")
-            return
+    if not settings:
+        print(f"[ERROR] Program '{name}' not found.")
+        return
 
-        cmd = settings["cmd"]
-        numprocs = settings.get("numprocs", 1)
-        startsecs = settings.get("startsecs", 0)
+    cmd = settings["cmd"]
+    numprocs = settings.get("numprocs", 1)
+    startsecs = settings.get("startsecs", 0)
+    retries = settings.get("startretries", 0)
 
-        for i in range(numprocs):
-            key = f"{name}:{i}"
+    for i in range(numprocs):
+        key = f"{name}:{i}"
 
-            # Vérifie si le processus tourne déjà
-            if key in self.processes and self.processes[key].poll() is None:
-                print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
-                continue
+        # Vérifie si le processus tourne déjà
+        if key in self.processes and self.processes[key].poll() is None:
+            print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
+            continue
 
+        for attempt in range(retries + 1):  # Au moins une tentative + retries
             try:
-                # Démarre le processus
                 proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
                 )
-                print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
-
-                # Attente pour valider que le process reste en vie
+                print(f"[START] {key} (try {attempt + 1}) launched (pid={proc.pid}), waiting {startsecs}s...")
                 time.sleep(startsecs)
 
-                # Vérifie si le process est encore actif
-                if proc.poll() is not None:
-                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
-                    continue
+                if proc.poll() is None:
+                    self.processes[key] = proc
+                    print(f"[OK] {key} is now running (pid={proc.pid})")
+                    break  # Processus démarré avec succès
 
-                # Ajoute le process à la liste s'il est OK
-                self.processes[key] = proc
-                print(f"[OK] {key} is now running (pid={proc.pid})")
+                else:
+                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
 
             except Exception as e:
-                print(f"[ERROR] Failed to start '{key}': {e}")
+                print(f"[ERROR] Failed to start '{key}' on try {attempt + 1}: {e}")
+
+            if attempt == retries:
+                print(f"[ERROR] {key} failed after {retries} retries.")
+
 
 
     def stop(self, args):
