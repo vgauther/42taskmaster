@@ -14,6 +14,8 @@ class Taskmaster:
         self.config = {}
         self.load_config()
         threading.Thread(target=self.monitor_processes, daemon=True).start()
+        self.config_mtime = os.path.getmtime(self.config_path)
+        threading.Thread(target=self.watch_config_file, daemon=True).start()
 
     def load_config(self):
         with open(self.config_path, 'r') as f:
@@ -22,6 +24,22 @@ class Taskmaster:
             for name, settings in programs.items():
                 if settings.get("autostart", False):
                     self.start([name])
+
+def reload_config(self, *args):
+    print("\n[INFO] Reloading configuration...")
+    self.load_config()
+    print("[INFO] Configuration reloaded.\ntaskmaster> ", end="", flush=True)
+
+    def watch_config_file(self):
+        while True:
+            try:
+                current_mtime = os.path.getmtime(self.config_path)
+                if current_mtime != self.config_mtime:
+                    self.config_mtime = current_mtime
+                    self.reload_config()
+            except Exception as e:
+                print(f"[WARN] Failed to watch config file: {e}")
+            time.sleep(1)  # Vérifie toutes les secondes
 
     def monitor_processes(self):
         while True:
