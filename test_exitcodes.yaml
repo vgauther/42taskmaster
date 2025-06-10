@@ -1,25 +1,40 @@
 programs:
-  prog_unexpected_exit_1:
-    cmd: "python3 -c 'import sys; sys.exit(1)'"  # exit 1 immédiat
+  # Doit redémarrer uniquement si sortie non attendue (exitcode != 0)
+  prog_unexpected_exit:
+    cmd: "python3 -c 'import sys; sys.exit(1)'"  # exit avec code 1
+    autorestart: "unexpected"
+    exitcodes: [0]           # 0 = code attendu
+    startsecs: 0
+    autostart: true
+    numprocs: 1
+    startretries: 3          # Retry 3 fois en cas d’échec
+
+  # Ne doit jamais redémarrer, même si exitcode non attendu
+  prog_never_restart:
+    cmd: "python3 -c 'import sys; sys.exit(1)'"
+    autorestart: "never"
+    exitcodes: [0]
+    startsecs: 0
+    autostart: true
+    numprocs: 1
+    startretries: 3          # Pas pris en compte
+
+  # Doit toujours redémarrer, même si exitcode est 0
+  prog_always_restart:
+    cmd: "python3 -c 'import sys; sys.exit(0)'"
+    autorestart: "always"
+    exitcodes: [0]
+    startsecs: 0
+    autostart: true
+    numprocs: 1
+    startretries: 2          # Retry 2 fois si restart échoue
+
+  # Sortie normale, ne doit pas redémarrer car exitcode attendu
+  prog_expected_exit:
+    cmd: "python3 -c 'import sys; sys.exit(0)'"
     autorestart: "unexpected"
     exitcodes: [0]
     startsecs: 0
     autostart: true
     numprocs: 1
     startretries: 3
-
-  prog_unexpected_exit_0:
-    cmd: "python3 -c 'import sys; sys.exit(0)'"  # exit 0 immédiat
-    autorestart: "unexpected"
-    exitcodes: [0]
-    startsecs: 0
-    autostart: true
-    numprocs: 1
-
-  prog_never:
-    cmd: "python3 -c 'import sys; sys.exit(1)'"  # exit 1 immédiat
-    autorestart: "never"
-    exitcodes: [0]
-    startsecs: 0
-    autostart: true
-    numprocs: 1

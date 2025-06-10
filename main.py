@@ -67,30 +67,24 @@ class Taskmaster:
                     # else autorestart == "never" → ne jamais redémarrer
 
                     if should_restart:
-                        # Tentatives de redémarrage avec retries
-                        if retries > 0:
-                            for attempt in range(retries):
-                                try:
-                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                                stdout=subprocess.DEVNULL,
-                                                                stderr=subprocess.DEVNULL)
-                                    self.processes[key] = new_proc
-                                    print(f"[RESTART] {key} (pid={new_proc.pid})")
-                                    break
-                                except Exception as e:
-                                    print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
-                                    time.sleep(1)
-                        else:
+                        max_attempts = retries + 1  # tentative initiale + retries
+
+                        for attempt in range(max_attempts):
                             try:
                                 new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
                                                             stdout=subprocess.DEVNULL,
                                                             stderr=subprocess.DEVNULL)
                                 self.processes[key] = new_proc
-                                print(f"[RESTART] {key} (pid={new_proc.pid})")
+                                print(f"[RESTART] {key} (pid={new_proc.pid}) on attempt {attempt + 1}/{max_attempts}")
+                                break  # restart réussi, on sort de la boucle
                             except Exception as e:
-                                print(f"[ERROR] Failed to restart {key}: {e}")
+                                print(f"[RETRY {attempt + 1}] Failed to restart {key}: {e}")
+                                time.sleep(1)
+                        else:
+                            # toutes les tentatives ont échoué
+                            print(f"[ERROR] Failed to restart {key} after {max_attempts} attempts")
+                            del self.processes[key]  # on enlève le process car il ne redémarre pas
                     else:
-                        # Arrêt attendu ou autorestart=never
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
             time.sleep(1)
