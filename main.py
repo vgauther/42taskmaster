@@ -41,6 +41,12 @@ class Taskmaster:
                 print(f"[WARN] Failed to watch config file: {e}")
             time.sleep(1)  # Vérifie toutes les secondes
 
+    def ensure_log_file(self, path):
+        if path and path != os.devnull:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            if not os.path.exists(path):
+                open(path, 'a').close()
+
     def monitor_processes(self):
         while True:
             for key in list(self.processes.keys()):
@@ -69,6 +75,8 @@ class Taskmaster:
                         if retries > 0:
                             for attempt in range(retries):
                                 try:
+                                    self.ensure_log_file(settings.get("stdout"))
+                                    self.ensure_log_file(settings.get("stderr"))
                                     stdout = open(settings.get("stdout", os.devnull), "ab")
                                     stderr = open(settings.get("stderr", os.devnull), "ab")
                                     new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
@@ -76,12 +84,17 @@ class Taskmaster:
                                                                 stderr=stderr)
                                     self.processes[key] = new_proc
                                     print(f"[RESTART] {key} (pid={new_proc.pid})")
-                                    break
+                                    return
                                 except Exception as e:
                                     print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
                                     time.sleep(1)
+                                finally:
+                                    stdout.close()
+                                    stderr.close()
                         else:
                             try:
+                                self.ensure_log_file(settings.get("stdout"))
+                                self.ensure_log_file(settings.get("stderr"))
                                 stdout = open(settings.get("stdout", os.devnull), "ab")
                                 stderr = open(settings.get("stderr", os.devnull), "ab")
                                 new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
@@ -91,6 +104,9 @@ class Taskmaster:
                                 print(f"[RESTART] {key} (pid={new_proc.pid})")
                             except Exception as e:
                                 print(f"[ERROR] Failed to restart {key}: {e}")
+                            finally:
+                                stdout.close()
+                                stderr.close()
                     else:
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
@@ -121,6 +137,10 @@ class Taskmaster:
                 continue
 
             try:
+                # Assure que les fichiers de log existent
+                self.ensure_log_file(settings.get("stdout"))
+                self.ensure_log_file(settings.get("stderr"))
+
                 # Récupère les chemins stdout/stderr s'ils existent, sinon /dev/null
                 stdout = open(settings.get("stdout", os.devnull), "ab")
                 stderr = open(settings.get("stderr", os.devnull), "ab")
@@ -147,6 +167,9 @@ class Taskmaster:
 
             except Exception as e:
                 print(f"[ERROR] Failed to start '{key}': {e}")
+            finally:
+                stdout.close()
+                stderr.close()
 
     def stop(self, args):
         if not args:
