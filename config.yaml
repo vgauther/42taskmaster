@@ -5,3 +5,5 @@ programs:
     startsecs: 3
     startretries: 3
     autorestart: never  # pas important ici
+    stdout: "./logs/prog_with_logs.out"
+    stderr: "./logs/prog_with_logs.err"
