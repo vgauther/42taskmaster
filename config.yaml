@@ -1,9 +1,7 @@
 programs:
-  test_fail_fast:
-    cmd: "python3 -c 'import sys; sys.exit(1)'"
+  createfile:
+    cmd: "/bin/bash -c 'touch /tmp/testfile && ls -l /tmp/testfile'"
+    stdout: "logs/createfile.out"
+    stderr: "logs/createfile.err"
+    umask: "077"          # Seul root/l'utilisateur pourra lire le fichier (pas les autres)
     autostart: true
-    startsecs: 3
-    startretries: 3
-    autorestart: never  # pas important ici
-    stdout: "./logs/prog_with_logs.out"
-    stderr: "./logs/prog_with_logs.err"
