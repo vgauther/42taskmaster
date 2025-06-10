@@ -25,10 +25,10 @@ class Taskmaster:
                 if settings.get("autostart", False):
                     self.start([name])
 
-def reload_config(self, *args):
-    print("\n[INFO] Reloading configuration...")
-    self.load_config()
-    print("[INFO] Configuration reloaded.\ntaskmaster> ", end="", flush=True)
+    def reload_config(self, *args):
+        print("\n[INFO] Reloading configuration...")
+        self.load_config()
+        print("[INFO] Configuration reloaded.\ntaskmaster> ", end="", flush=True)
 
     def watch_config_file(self):
         while True:
