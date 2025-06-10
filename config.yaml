@@ -1,8 +1,7 @@
 programs:
-  prog_fail_start:
-    cmd: "python3 -c 'import sys; sys.exit(1)'"  # Échec immédiat
-    autostart: false
-    autorestart: "never"
-    startsecs: 1
+  test_fail_fast:
+    cmd: "python3 -c 'import sys; sys.exit(1)'"
+    autostart: true
+    startsecs: 3
     startretries: 3
-    numprocs: 1
+    autorestart: never  # pas important ici
