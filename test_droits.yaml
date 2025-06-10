@@ -1,0 +1,22 @@
+programs:
+  myapp:
+    cmd: "/bin/sh -c 'echo Hello from myapp; sleep 60'"
+    autostart: true
+    autorestart: unexpected
+    startsecs: 2
+    startretries: 3
+    exitcodes: [0]
+    numprocs: 2
+    stdout: "/tmp/myapp_out.log"
+    stderr: "/tmp/myapp_err.log"
+    umask: "022"
+
+  sleeper:
+    cmd: "/bin/sleep 120"
+    autostart: false
+    autorestart: never
+    startsecs: 1
+    numprocs: 1
+    stdout: "/tmp/sleeper_out.log"
+    stderr: "/tmp/sleeper_err.log"
+    umask: "027"

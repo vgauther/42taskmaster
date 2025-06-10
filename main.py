@@ -79,34 +79,62 @@ class Taskmaster:
                                     self.ensure_log_file(settings.get("stderr"))
                                     stdout = open(settings.get("stdout", os.devnull), "ab")
                                     stderr = open(settings.get("stderr", os.devnull), "ab")
-                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                                stdout=stdout,
-                                                                stderr=stderr)
+
+                                    # Gestion du umask
+                                    umask_str = settings.get("umask")
+                                    if umask_str:
+                                        umask_value = int(umask_str, 8)
+                                    else:
+                                        umask_value = None
+
+                                    old_umask = None
+                                    if umask_value is not None:
+                                        old_umask = os.umask(umask_value)
+
+                                    try:
+                                        new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                                    stdout=stdout,
+                                                                    stderr=stderr)
+                                    finally:
+                                        if old_umask is not None:
+                                            os.umask(old_umask)
+
                                     self.processes[key] = new_proc
                                     print(f"[RESTART] {key} (pid={new_proc.pid})")
-                                    return
+                                    break
                                 except Exception as e:
                                     print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
                                     time.sleep(1)
-                                finally:
-                                    stdout.close()
-                                    stderr.close()
                         else:
                             try:
                                 self.ensure_log_file(settings.get("stdout"))
                                 self.ensure_log_file(settings.get("stderr"))
                                 stdout = open(settings.get("stdout", os.devnull), "ab")
                                 stderr = open(settings.get("stderr", os.devnull), "ab")
-                                new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                            stdout=stdout,
-                                                            stderr=stderr)
+
+                                # Gestion du umask
+                                umask_str = settings.get("umask")
+                                if umask_str:
+                                    umask_value = int(umask_str, 8)
+                                else:
+                                    umask_value = None
+
+                                old_umask = None
+                                if umask_value is not None:
+                                    old_umask = os.umask(umask_value)
+
+                                try:
+                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                                stdout=stdout,
+                                                                stderr=stderr)
+                                finally:
+                                    if old_umask is not None:
+                                        os.umask(old_umask)
+
                                 self.processes[key] = new_proc
                                 print(f"[RESTART] {key} (pid={new_proc.pid})")
                             except Exception as e:
                                 print(f"[ERROR] Failed to restart {key}: {e}")
-                            finally:
-                                stdout.close()
-                                stderr.close()
                     else:
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
@@ -145,12 +173,28 @@ class Taskmaster:
                 stdout = open(settings.get("stdout", os.devnull), "ab")
                 stderr = open(settings.get("stderr", os.devnull), "ab")
 
-                # Démarre le processus
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    stdout=stdout,
-                    stderr=stderr
-                )
+                # Gestion du umask
+                umask_str = settings.get("umask")
+                if umask_str:
+                    umask_value = int(umask_str, 8)
+                else:
+                    umask_value = None
+
+                old_umask = None
+                if umask_value is not None:
+                    old_umask = os.umask(umask_value)
+
+                try:
+                    # Démarre le processus
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=stdout,
+                        stderr=stderr
+                    )
+                finally:
+                    if old_umask is not None:
+                        os.umask(old_umask)
+
                 print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
 
                 # Attente pour valider que le process reste en vie
@@ -167,9 +211,6 @@ class Taskmaster:
 
             except Exception as e:
                 print(f"[ERROR] Failed to start '{key}': {e}")
-            finally:
-                stdout.close()
-                stderr.close()
 
     def stop(self, args):
         if not args:
