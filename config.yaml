@@ -1,10 +1,8 @@
-
 programs:
-  myprog:
-    cmd: "tail -f /tmp/toto"
-    numprocs: 1
-    autorestart: "unexpected"
-    startsecs: 6
-    autostart: true
+  prog_fail_start:
+    cmd: "python3 -c 'import sys; sys.exit(1)'"  # Échec immédiat
+    autostart: false
+    autorestart: "never"
+    startsecs: 1
     startretries: 3
-    exitcodes: [0]
+    numprocs: 1
