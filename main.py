@@ -45,21 +45,29 @@ class Taskmaster:
         while True:
             for key in list(self.processes.keys()):
                 proc = self.processes[key]
-                if proc.poll() is not None:  # Process is terminated
+                if proc.poll() is not None:  # Processus terminé
                     name, idx = key.split(":")
                     settings = self.config["programs"][name]
-                    exitcodes = settings.get("exitcodes", [0])
+
+                    exitcodes = settings.get("exitcodes", [0])  # Codes "attendus"
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
 
+                    retcode = proc.returncode
+
+                    # Détermine si la sortie est "attendue"
+                    is_expected_exit = retcode in exitcodes
+
                     should_restart = False
+
                     if autorestart == "always":
                         should_restart = True
-                    elif autorestart == "unexpected":
-                        if proc.returncode not in exitcodes:
-                            should_restart = True
+                    elif autorestart == "unexpected" and not is_expected_exit:
+                        should_restart = True
+                    # else autorestart == "never" → ne jamais redémarrer
 
                     if should_restart:
+                        # Tentatives de redémarrage avec retries
                         if retries > 0:
                             for attempt in range(retries):
                                 try:
@@ -82,10 +90,11 @@ class Taskmaster:
                             except Exception as e:
                                 print(f"[ERROR] Failed to restart {key}: {e}")
                     else:
-                        print(f"[INFO] {key} exited with code {proc.returncode}")
+                        # Arrêt attendu ou autorestart=never
+                        print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
             time.sleep(1)
-
+            
     def start(self, args):
         if not args:
             print("Usage: start <program>")
