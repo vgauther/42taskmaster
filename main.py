@@ -64,26 +64,33 @@ class Taskmaster:
                         should_restart = True
                     elif autorestart == "unexpected" and not is_expected_exit:
                         should_restart = True
-                    # else autorestart == "never" → ne jamais redémarrer
 
                     if should_restart:
-                        max_attempts = retries + 1  # tentative initiale + retries
-
-                        for attempt in range(max_attempts):
-                            try:
-                                new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                            stdout=subprocess.DEVNULL,
-                                                            stderr=subprocess.DEVNULL)
-                                self.processes[key] = new_proc
-                                print(f"[RESTART] {key} (pid={new_proc.pid}) on attempt {attempt + 1}/{max_attempts}")
-                                break  # restart réussi, on sort de la boucle
-                            except Exception as e:
-                                print(f"[RETRY {attempt + 1}] Failed to restart {key}: {e}")
-                                time.sleep(1)
+                        if retries > 0:
+                            for attempt in range(retries):
+                                try:
+                                    stdout = open(settings.get("stdout", os.devnull), "ab")
+                                    stderr = open(settings.get("stderr", os.devnull), "ab")
+                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                                stdout=stdout,
+                                                                stderr=stderr)
+                                    self.processes[key] = new_proc
+                                    print(f"[RESTART] {key} (pid={new_proc.pid})")
+                                    break
+                                except Exception as e:
+                                    print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
+                                    time.sleep(1)
                         else:
-                            # toutes les tentatives ont échoué
-                            print(f"[ERROR] Failed to restart {key} after {max_attempts} attempts")
-                            del self.processes[key]  # on enlève le process car il ne redémarre pas
+                            try:
+                                stdout = open(settings.get("stdout", os.devnull), "ab")
+                                stderr = open(settings.get("stderr", os.devnull), "ab")
+                                new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
+                                                            stdout=stdout,
+                                                            stderr=stderr)
+                                self.processes[key] = new_proc
+                                print(f"[RESTART] {key} (pid={new_proc.pid})")
+                            except Exception as e:
+                                print(f"[ERROR] Failed to restart {key}: {e}")
                     else:
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
@@ -104,7 +111,6 @@ class Taskmaster:
         cmd = settings["cmd"]
         numprocs = settings.get("numprocs", 1)
         startsecs = settings.get("startsecs", 0)
-        retries = settings.get("startretries", 0)
 
         for i in range(numprocs):
             key = f"{name}:{i}"
@@ -114,31 +120,33 @@ class Taskmaster:
                 print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
                 continue
 
-            for attempt in range(retries + 1):  # Au moins une tentative + retries
-                try:
-                    proc = subprocess.Popen(
-                        shlex.split(cmd),
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    print(f"[START] {key} (try {attempt + 1}) launched (pid={proc.pid}), waiting {startsecs}s...")
-                    time.sleep(startsecs)
+            try:
+                # Récupère les chemins stdout/stderr s'ils existent, sinon /dev/null
+                stdout = open(settings.get("stdout", os.devnull), "ab")
+                stderr = open(settings.get("stderr", os.devnull), "ab")
 
-                    if proc.poll() is None:
-                        self.processes[key] = proc
-                        print(f"[OK] {key} is now running (pid={proc.pid})")
-                        break  # Processus démarré avec succès
+                # Démarre le processus
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=stdout,
+                    stderr=stderr
+                )
+                print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
 
-                    else:
-                        print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                # Attente pour valider que le process reste en vie
+                time.sleep(startsecs)
 
-                except Exception as e:
-                    print(f"[ERROR] Failed to start '{key}' on try {attempt + 1}: {e}")
+                # Vérifie si le process est encore actif
+                if proc.poll() is not None:
+                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                    continue
 
-                if attempt == retries:
-                    print(f"[ERROR] {key} failed after {retries} retries.")
+                # Ajoute le process à la liste s'il est OK
+                self.processes[key] = proc
+                print(f"[OK] {key} is now running (pid={proc.pid})")
 
-
+            except Exception as e:
+                print(f"[ERROR] Failed to start '{key}': {e}")
 
     def stop(self, args):
         if not args:
