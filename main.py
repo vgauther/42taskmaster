@@ -96,53 +96,53 @@ class Taskmaster:
             time.sleep(1)
 
     def start(self, args):
-    if not args:
-        print("Usage: start <program>")
-        return
+        if not args:
+            print("Usage: start <program>")
+            return
 
-    name = args[0]
-    settings = self.config["programs"].get(name)
+        name = args[0]
+        settings = self.config["programs"].get(name)
 
-    if not settings:
-        print(f"[ERROR] Program '{name}' not found.")
-        return
+        if not settings:
+            print(f"[ERROR] Program '{name}' not found.")
+            return
 
-    cmd = settings["cmd"]
-    numprocs = settings.get("numprocs", 1)
-    startsecs = settings.get("startsecs", 0)
-    retries = settings.get("startretries", 0)
+        cmd = settings["cmd"]
+        numprocs = settings.get("numprocs", 1)
+        startsecs = settings.get("startsecs", 0)
+        retries = settings.get("startretries", 0)
 
-    for i in range(numprocs):
-        key = f"{name}:{i}"
+        for i in range(numprocs):
+            key = f"{name}:{i}"
 
-        # Vérifie si le processus tourne déjà
-        if key in self.processes and self.processes[key].poll() is None:
-            print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
-            continue
+            # Vérifie si le processus tourne déjà
+            if key in self.processes and self.processes[key].poll() is None:
+                print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
+                continue
 
-        for attempt in range(retries + 1):  # Au moins une tentative + retries
-            try:
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                print(f"[START] {key} (try {attempt + 1}) launched (pid={proc.pid}), waiting {startsecs}s...")
-                time.sleep(startsecs)
+            for attempt in range(retries + 1):  # Au moins une tentative + retries
+                try:
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    print(f"[START] {key} (try {attempt + 1}) launched (pid={proc.pid}), waiting {startsecs}s...")
+                    time.sleep(startsecs)
 
-                if proc.poll() is None:
-                    self.processes[key] = proc
-                    print(f"[OK] {key} is now running (pid={proc.pid})")
-                    break  # Processus démarré avec succès
+                    if proc.poll() is None:
+                        self.processes[key] = proc
+                        print(f"[OK] {key} is now running (pid={proc.pid})")
+                        break  # Processus démarré avec succès
 
-                else:
-                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                    else:
+                        print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
 
-            except Exception as e:
-                print(f"[ERROR] Failed to start '{key}' on try {attempt + 1}: {e}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to start '{key}' on try {attempt + 1}: {e}")
 
-            if attempt == retries:
-                print(f"[ERROR] {key} failed after {retries} retries.")
+                if attempt == retries:
+                    print(f"[ERROR] {key} failed after {retries} retries.")
 
 
 
