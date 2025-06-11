@@ -18,7 +18,7 @@ class Taskmaster:
         threading.Thread(target=self.monitor_processes, daemon=True).start()
         self.config_mtime = os.path.getmtime(self.config_path)
         threading.Thread(target=self.watch_config_file, daemon=True).start()
-        signal.signal(signal.SIGHUP, self.reload_config)  # Support du SIGHUP
+        signal.signal(signal.SIGHUP, self.reload_config)  # Support du SIGHUP pour recharger la configuration à chaud
 
     def load_config(self):
         with open(self.config_path, 'r') as f:
@@ -29,7 +29,7 @@ class Taskmaster:
                     self.start([name])
 
     def reload_config(self, *args):
-        print("\n[INFO] Reloading configuration...")
+        print("\n[INFO] Reloading configuration via SIGHUP...")
         self.load_config()
         print("[INFO] Configuration reloaded.\ntaskmaster> ", end="", flush=True)
 
@@ -91,7 +91,7 @@ class Taskmaster:
             old_umask = os.umask(umask_value) if umask_value is not None else None
             try:
                 env = os.environ.copy()
-                env.update(settings.get("env", {}))
+                env.update(settings.get("env", {}))  # Merge des variables d'environnement du YAML
                 workingdir = settings.get("workingdir", None)
                 new_proc = subprocess.Popen(
                     shlex.split(settings["cmd"]),
@@ -137,7 +137,7 @@ class Taskmaster:
                 old_umask = os.umask(umask_value) if umask_value is not None else None
                 try:
                     env = os.environ.copy()
-                    env.update(settings.get("env", {}))
+                    env.update(settings.get("env", {}))  # Applique les variables d'environnement du programme
                     workingdir = settings.get("workingdir", None)
                     proc = subprocess.Popen(
                         shlex.split(cmd),
