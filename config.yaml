@@ -1,7 +1,8 @@
 programs:
-  createfile:
-    cmd: "/bin/bash -c 'touch /tmp/testfile && ls -l /tmp/testfile'"
-    stdout: "logs/createfile.out"
-    stderr: "logs/createfile.err"
-    umask: "077"          # Seul root/l'utilisateur pourra lire le fichier (pas les autres)
+  wd_test:
+    cmd: "python3 -c 'import os; print(\"Working directory is:\", os.getcwd())'"
+    numprocs: 1
     autostart: true
+    workingdir: "./test_dir"
+    stdout: "./test_dir/wd_test.out"
+    stderr: "./test_dir/wd_test.err"

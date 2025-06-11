@@ -92,9 +92,13 @@ class Taskmaster:
                                         old_umask = os.umask(umask_value)
 
                                     try:
-                                        new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                                    stdout=stdout,
-                                                                    stderr=stderr)
+                                        workingdir = settings.get("workingdir", None)
+                                        new_proc = subprocess.Popen(
+                                            shlex.split(settings["cmd"]),
+                                            stdout=stdout,
+                                            stderr=stderr,
+                                            cwd=workingdir
+                                        )
                                     finally:
                                         if old_umask is not None:
                                             os.umask(old_umask)
@@ -124,9 +128,13 @@ class Taskmaster:
                                     old_umask = os.umask(umask_value)
 
                                 try:
-                                    new_proc = subprocess.Popen(shlex.split(settings["cmd"]),
-                                                                stdout=stdout,
-                                                                stderr=stderr)
+                                    workingdir = settings.get("workingdir", None)
+                                    new_proc = subprocess.Popen(
+                                        shlex.split(settings["cmd"]),
+                                        stdout=stdout,
+                                        stderr=stderr,
+                                        cwd=workingdir
+                                    )
                                 finally:
                                     if old_umask is not None:
                                         os.umask(old_umask)
@@ -186,10 +194,12 @@ class Taskmaster:
 
                 try:
                     # Démarre le processus
+                    workingdir = settings.get("workingdir", None)
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=stdout,
-                        stderr=stderr
+                        stderr=stderr,
+                        cwd=workingdir
                     )
                 finally:
                     if old_umask is not None:
