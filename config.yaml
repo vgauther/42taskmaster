@@ -7,3 +7,11 @@ programs:
     numprocs: 1
     stdout: "/tmp/sleeper_out.log"
     stderr: "/tmp/sleeper_err.log"
+  sleeper2:
+    cmd: "/bin/sleep 60"
+    autostart: true
+    stopsignal: INT        # Envoie SIGINT au lieu de SIGTERM
+    stoptime: 3            # Attend 3 secondes avant de forcer l'arrêt avec SIGKILL
+    numprocs: 1
+    stdout: "/tmp/sleeper2_out.log"
+    stderr: "/tmp/sleeper2_err.log"

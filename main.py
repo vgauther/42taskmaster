@@ -34,11 +34,21 @@ class Taskmaster:
 
     def load_config(self):
         with open(self.config_path, 'r') as f:
-            self.config = yaml.safe_load(f)
-            programs = self.config.get("programs", {})
-            for name, settings in programs.items():
-                if settings.get("autostart", False):
-                    self.start([name])
+            new_config = yaml.safe_load(f)
+
+        new_programs = new_config.get("programs", {})
+        old_programs = self.config.get("programs", {})
+
+        # Arrête les programmes qui ont été supprimés du fichier YAML
+        removed_programs = set(old_programs.keys()) - set(new_programs.keys())
+        for name in removed_programs:
+            self.stop([name])
+
+        self.config = new_config
+
+        for name, settings in new_programs.items():
+            if settings.get("autostart", False):
+                self.start([name])
 
     def reload_config(self, *args):
         logger.info("Reloading configuration via SIGHUP...")
@@ -69,7 +79,7 @@ class Taskmaster:
                 proc = self.processes[key]
                 if proc.poll() is not None:
                     name, idx = key.split(":")
-                    settings = self.config["programs"][name]
+                    settings = self.config["programs"].get(name, {})
                     exitcodes = settings.get("exitcodes", [0])
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
