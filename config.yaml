@@ -1,9 +1,9 @@
 programs:
-  showenv:
-    cmd: "printenv MY_VAR"
-    numprocs: 1
+  sleeper:
+    cmd: "/bin/sleep 60"
     autostart: true
-    stdout: "/tmp/showenv.out"
-    stderr: "/tmp/showenv.err"
-    env:
-      MY_VAR: "HelloFromTaskmaster"
+    stopsignal: INT        # Envoie SIGINT au lieu de SIGTERM
+    stoptime: 3            # Attend 3 secondes avant de forcer l'arrêt avec SIGKILL
+    numprocs: 1
+    stdout: "/tmp/sleeper_out.log"
+    stderr: "/tmp/sleeper_err.log"
