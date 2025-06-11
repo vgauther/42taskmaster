@@ -6,7 +6,19 @@ import os
 import signal
 import threading
 import time
+import logging
 from dotenv import load_dotenv
+
+# Configuration de base du logger global
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("taskmaster.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class Taskmaster:
     def __init__(self, config_path):
@@ -29,9 +41,10 @@ class Taskmaster:
                     self.start([name])
 
     def reload_config(self, *args):
-        print("\n[INFO] Reloading configuration via SIGHUP...")
+        logger.info("Reloading configuration via SIGHUP...")
         self.load_config()
-        print("[INFO] Configuration reloaded.\ntaskmaster> ", end="", flush=True)
+        logger.info("Configuration reloaded.")
+        print("taskmaster> ", end="", flush=True)
 
     def watch_config_file(self):
         while True:
@@ -41,7 +54,7 @@ class Taskmaster:
                     self.config_mtime = current_mtime
                     self.reload_config()
             except Exception as e:
-                print(f"[WARN] Failed to watch config file: {e}")
+                logger.warning(f"Failed to watch config file: {e}")
             time.sleep(1)
 
     def ensure_log_file(self, path):
@@ -76,7 +89,7 @@ class Taskmaster:
                         else:
                             self._restart_process(key, settings)
                     else:
-                        print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
+                        logger.info(f"{key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
             time.sleep(1)
 
@@ -91,7 +104,7 @@ class Taskmaster:
             old_umask = os.umask(umask_value) if umask_value is not None else None
             try:
                 env = os.environ.copy()
-                env.update(settings.get("env", {}))  # Merge des variables d'environnement du YAML
+                env.update(settings.get("env", {}))
                 workingdir = settings.get("workingdir", None)
                 new_proc = subprocess.Popen(
                     shlex.split(settings["cmd"]),
@@ -104,20 +117,20 @@ class Taskmaster:
                 if old_umask is not None:
                     os.umask(old_umask)
             self.processes[key] = new_proc
-            print(f"[RESTART] {key} (pid={new_proc.pid})")
+            logger.info(f"[RESTART] {key} (pid={new_proc.pid})")
             return True
         except Exception as e:
-            print(f"[ERROR] Failed to restart {key}: {e}")
+            logger.error(f"Failed to restart {key}: {e}")
             return False
 
     def start(self, args):
         if not args:
-            print("Usage: start <program>")
+            logger.warning("Usage: start <program>")
             return
         name = args[0]
         settings = self.config["programs"].get(name)
         if not settings:
-            print(f"[ERROR] Program '{name}' not found.")
+            logger.error(f"Program '{name}' not found.")
             return
         cmd = settings["cmd"]
         numprocs = settings.get("numprocs", 1)
@@ -125,7 +138,7 @@ class Taskmaster:
         for i in range(numprocs):
             key = f"{name}:{i}"
             if key in self.processes and self.processes[key].poll() is None:
-                print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
+                logger.info(f"{key} already running (pid={self.processes[key].pid})")
                 continue
             try:
                 self.ensure_log_file(settings.get("stdout"))
@@ -137,7 +150,7 @@ class Taskmaster:
                 old_umask = os.umask(umask_value) if umask_value is not None else None
                 try:
                     env = os.environ.copy()
-                    env.update(settings.get("env", {}))  # Applique les variables d'environnement du programme
+                    env.update(settings.get("env", {}))
                     workingdir = settings.get("workingdir", None)
                     proc = subprocess.Popen(
                         shlex.split(cmd),
@@ -149,19 +162,19 @@ class Taskmaster:
                 finally:
                     if old_umask is not None:
                         os.umask(old_umask)
-                print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
+                logger.info(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
                 time.sleep(startsecs)
                 if proc.poll() is not None:
-                    print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                    logger.warning(f"[FAIL] {key} exited too soon (code={proc.returncode})")
                     continue
                 self.processes[key] = proc
-                print(f"[OK] {key} is now running (pid={proc.pid})")
+                logger.info(f"[OK] {key} is now running (pid={proc.pid})")
             except Exception as e:
-                print(f"[ERROR] Failed to start '{key}': {e}")
+                logger.error(f"Failed to start '{key}': {e}")
 
     def stop(self, args):
         if not args:
-            print("Usage: stop <program>")
+            logger.warning("Usage: stop <program>")
             return
         name = args[0]
         for key in list(self.processes.keys()):
@@ -174,15 +187,15 @@ class Taskmaster:
                     sig = getattr(signal, f"SIG{stopsignal}", signal.SIGTERM)
                     try:
                         proc.send_signal(sig)
-                        print(f"[STOP] Sent {stopsignal} to '{key}', waiting {stoptime}s...")
+                        logger.info(f"[STOP] Sent {stopsignal} to '{key}', waiting {stoptime}s...")
                         proc.wait(timeout=stoptime)
                     except subprocess.TimeoutExpired:
-                        print(f"[KILL] {key} did not stop after {stoptime}s, killing.")
+                        logger.warning(f"[KILL] {key} did not stop after {stoptime}s, killing.")
                         proc.kill()
                         proc.wait()
-                    print(f"[STOP] {key} stopped.")
+                    logger.info(f"[STOP] {key} stopped.")
                 else:
-                    print(f"[INFO] {key} is not running.")
+                    logger.info(f"[INFO] {key} is not running.")
                 del self.processes[key]
 
     def restart(self, args):
@@ -196,9 +209,9 @@ class Taskmaster:
                 key = f"{name}:{i}"
                 proc = self.processes.get(key)
                 if proc and proc.poll() is None:
-                    print(f"{key}: RUNNING (pid={proc.pid})")
+                    logger.info(f"{key}: RUNNING (pid={proc.pid})")
                 else:
-                    print(f"{key}: STOPPED")
+                    logger.info(f"{key}: STOPPED")
 
     def run_shell(self):
         print("Taskmaster CLI. Type 'help' for commands.")
@@ -225,7 +238,7 @@ class Taskmaster:
                 elif cmd == "help":
                     print("Commands: start <name>, stop <name>, restart <name>, status, exit")
                 else:
-                    print(f"[ERROR] Unknown command '{cmd}'.")
+                    logger.error(f"Unknown command '{cmd}'.")
             except (EOFError, KeyboardInterrupt):
                 print("\n[INFO] Exiting.")
                 self.cleanup()
@@ -236,7 +249,7 @@ class Taskmaster:
             if proc.poll() is None:
                 proc.terminate()
                 proc.wait()
-                print(f"[CLEANUP] Stopped '{key}'.")
+                logger.info(f"[CLEANUP] Stopped '{key}'.")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
