@@ -18,6 +18,7 @@ class Taskmaster:
         threading.Thread(target=self.monitor_processes, daemon=True).start()
         self.config_mtime = os.path.getmtime(self.config_path)
         threading.Thread(target=self.watch_config_file, daemon=True).start()
+        signal.signal(signal.SIGHUP, self.reload_config)  # Support du SIGHUP
 
     def load_config(self):
         with open(self.config_path, 'r') as f:
@@ -167,11 +168,22 @@ class Taskmaster:
             if key.startswith(name + ":"):
                 proc = self.processes[key]
                 if proc.poll() is None:
-                    proc.terminate()
-                    proc.wait()
+                    settings = self.config["programs"].get(name, {})
+                    stopsignal = settings.get("stopsignal", "TERM").upper()
+                    stoptime = settings.get("stoptime", 5)
+                    sig = getattr(signal, f"SIG{stopsignal}", signal.SIGTERM)
+                    try:
+                        proc.send_signal(sig)
+                        print(f"[STOP] Sent {stopsignal} to '{key}', waiting {stoptime}s...")
+                        proc.wait(timeout=stoptime)
+                    except subprocess.TimeoutExpired:
+                        print(f"[KILL] {key} did not stop after {stoptime}s, killing.")
+                        proc.kill()
+                        proc.wait()
                     print(f"[STOP] {key} stopped.")
                 else:
                     print(f"[INFO] {key} is not running.")
+                del self.processes[key]
 
     def restart(self, args):
         self.stop(args)
