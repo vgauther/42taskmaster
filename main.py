@@ -6,12 +6,14 @@ import os
 import signal
 import threading
 import time
+from dotenv import load_dotenv
 
 class Taskmaster:
     def __init__(self, config_path):
         self.config_path = config_path
         self.processes = {}  # Clé : "name:index", Valeur : Popen
         self.config = {}
+        load_dotenv()  # Chargement des variables d'environnement depuis un .env si présent
         self.load_config()
         threading.Thread(target=self.monitor_processes, daemon=True).start()
         self.config_mtime = os.path.getmtime(self.config_path)
@@ -39,7 +41,7 @@ class Taskmaster:
                     self.reload_config()
             except Exception as e:
                 print(f"[WARN] Failed to watch config file: {e}")
-            time.sleep(1)  # Vérifie toutes les secondes
+            time.sleep(1)
 
     def ensure_log_file(self, path):
         if path and path != os.devnull:
@@ -51,174 +53,108 @@ class Taskmaster:
         while True:
             for key in list(self.processes.keys()):
                 proc = self.processes[key]
-                if proc.poll() is not None:  # Processus terminé
+                if proc.poll() is not None:
                     name, idx = key.split(":")
                     settings = self.config["programs"][name]
-
-                    exitcodes = settings.get("exitcodes", [0])  # Codes "attendus"
+                    exitcodes = settings.get("exitcodes", [0])
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
-
                     retcode = proc.returncode
-
-                    # Détermine si la sortie est "attendue"
                     is_expected_exit = retcode in exitcodes
-
                     should_restart = False
-
                     if autorestart == "always":
                         should_restart = True
                     elif autorestart == "unexpected" and not is_expected_exit:
                         should_restart = True
-
                     if should_restart:
                         if retries > 0:
                             for attempt in range(retries):
-                                try:
-                                    self.ensure_log_file(settings.get("stdout"))
-                                    self.ensure_log_file(settings.get("stderr"))
-                                    stdout = open(settings.get("stdout", os.devnull), "ab")
-                                    stderr = open(settings.get("stderr", os.devnull), "ab")
-
-                                    # Gestion du umask
-                                    umask_str = settings.get("umask")
-                                    if umask_str:
-                                        umask_value = int(umask_str, 8)
-                                    else:
-                                        umask_value = None
-
-                                    old_umask = None
-                                    if umask_value is not None:
-                                        old_umask = os.umask(umask_value)
-
-                                    try:
-                                        workingdir = settings.get("workingdir", None)
-                                        new_proc = subprocess.Popen(
-                                            shlex.split(settings["cmd"]),
-                                            stdout=stdout,
-                                            stderr=stderr,
-                                            cwd=workingdir
-                                        )
-                                    finally:
-                                        if old_umask is not None:
-                                            os.umask(old_umask)
-
-                                    self.processes[key] = new_proc
-                                    print(f"[RESTART] {key} (pid={new_proc.pid})")
+                                if self._restart_process(key, settings):
                                     break
-                                except Exception as e:
-                                    print(f"[RETRY {attempt+1}] Failed to restart {key}: {e}")
-                                    time.sleep(1)
+                                time.sleep(1)
                         else:
-                            try:
-                                self.ensure_log_file(settings.get("stdout"))
-                                self.ensure_log_file(settings.get("stderr"))
-                                stdout = open(settings.get("stdout", os.devnull), "ab")
-                                stderr = open(settings.get("stderr", os.devnull), "ab")
-
-                                # Gestion du umask
-                                umask_str = settings.get("umask")
-                                if umask_str:
-                                    umask_value = int(umask_str, 8)
-                                else:
-                                    umask_value = None
-
-                                old_umask = None
-                                if umask_value is not None:
-                                    old_umask = os.umask(umask_value)
-
-                                try:
-                                    workingdir = settings.get("workingdir", None)
-                                    new_proc = subprocess.Popen(
-                                        shlex.split(settings["cmd"]),
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cwd=workingdir
-                                    )
-                                finally:
-                                    if old_umask is not None:
-                                        os.umask(old_umask)
-
-                                self.processes[key] = new_proc
-                                print(f"[RESTART] {key} (pid={new_proc.pid})")
-                            except Exception as e:
-                                print(f"[ERROR] Failed to restart {key}: {e}")
+                            self._restart_process(key, settings)
                     else:
                         print(f"[INFO] {key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
             time.sleep(1)
 
+    def _restart_process(self, key, settings):
+        try:
+            self.ensure_log_file(settings.get("stdout"))
+            self.ensure_log_file(settings.get("stderr"))
+            stdout = open(settings.get("stdout", os.devnull), "ab")
+            stderr = open(settings.get("stderr", os.devnull), "ab")
+            umask_str = settings.get("umask")
+            umask_value = int(umask_str, 8) if umask_str else None
+            old_umask = os.umask(umask_value) if umask_value is not None else None
+            try:
+                env = os.environ.copy()
+                env.update(settings.get("env", {}))
+                workingdir = settings.get("workingdir", None)
+                new_proc = subprocess.Popen(
+                    shlex.split(settings["cmd"]),
+                    stdout=stdout,
+                    stderr=stderr,
+                    cwd=workingdir,
+                    env=env
+                )
+            finally:
+                if old_umask is not None:
+                    os.umask(old_umask)
+            self.processes[key] = new_proc
+            print(f"[RESTART] {key} (pid={new_proc.pid})")
+            return True
+        except Exception as e:
+            print(f"[ERROR] Failed to restart {key}: {e}")
+            return False
+
     def start(self, args):
         if not args:
             print("Usage: start <program>")
             return
-
         name = args[0]
         settings = self.config["programs"].get(name)
-
         if not settings:
             print(f"[ERROR] Program '{name}' not found.")
             return
-
         cmd = settings["cmd"]
         numprocs = settings.get("numprocs", 1)
         startsecs = settings.get("startsecs", 0)
-
         for i in range(numprocs):
             key = f"{name}:{i}"
-
-            # Vérifie si le processus tourne déjà
             if key in self.processes and self.processes[key].poll() is None:
                 print(f"[INFO] {key} already running (pid={self.processes[key].pid})")
                 continue
-
             try:
-                # Assure que les fichiers de log existent
                 self.ensure_log_file(settings.get("stdout"))
                 self.ensure_log_file(settings.get("stderr"))
-
-                # Récupère les chemins stdout/stderr s'ils existent, sinon /dev/null
                 stdout = open(settings.get("stdout", os.devnull), "ab")
                 stderr = open(settings.get("stderr", os.devnull), "ab")
-
-                # Gestion du umask
                 umask_str = settings.get("umask")
-                if umask_str:
-                    umask_value = int(umask_str, 8)
-                else:
-                    umask_value = None
-
-                old_umask = None
-                if umask_value is not None:
-                    old_umask = os.umask(umask_value)
-
+                umask_value = int(umask_str, 8) if umask_str else None
+                old_umask = os.umask(umask_value) if umask_value is not None else None
                 try:
-                    # Démarre le processus
+                    env = os.environ.copy()
+                    env.update(settings.get("env", {}))
                     workingdir = settings.get("workingdir", None)
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=stdout,
                         stderr=stderr,
-                        cwd=workingdir
+                        cwd=workingdir,
+                        env=env
                     )
                 finally:
                     if old_umask is not None:
                         os.umask(old_umask)
-
                 print(f"[START] {key} launched (pid={proc.pid}), waiting {startsecs}s...")
-
-                # Attente pour valider que le process reste en vie
                 time.sleep(startsecs)
-
-                # Vérifie si le process est encore actif
                 if proc.poll() is not None:
                     print(f"[FAIL] {key} exited too soon (code={proc.returncode})")
                     continue
-
-                # Ajoute le process à la liste s'il est OK
                 self.processes[key] = proc
                 print(f"[OK] {key} is now running (pid={proc.pid})")
-
             except Exception as e:
                 print(f"[ERROR] Failed to start '{key}': {e}")
 
@@ -262,7 +198,6 @@ class Taskmaster:
                 parts = line.split()
                 cmd = parts[0]
                 args = parts[1:]
-
                 if cmd == "exit":
                     print("Exiting.")
                     self.cleanup()
@@ -295,6 +230,5 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python3 taskmaster.py config.yaml")
         sys.exit(1)
-
     tm = Taskmaster(sys.argv[1])
     tm.run_shell()

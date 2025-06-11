@@ -1,8 +1,9 @@
 programs:
-  wd_test:
-    cmd: "python3 -c 'import os; print(\"Working directory is:\", os.getcwd())'"
+  showenv:
+    cmd: "printenv MY_VAR"
     numprocs: 1
     autostart: true
-    workingdir: "./test_dir"
-    stdout: "./test_dir/wd_test.out"
-    stderr: "./test_dir/wd_test.err"
+    stdout: "/tmp/showenv.out"
+    stderr: "/tmp/showenv.err"
+    env:
+      MY_VAR: "HelloFromTaskmaster"
