@@ -1,5 +1,21 @@
-➜  42taskmaster git:(main) ✗ python3 main.py test/startretries.yaml
-2025-06-12 14:59:03,493 [INFO] [START] crash_test:0 launched (pid=2739), waiting 1s...
-2025-06-12 14:59:04,494 [WARNING] [FAIL] crash_test:0 exited too soon (code=1)
+➜  42taskmaster git:(main) python3 main.py test/startretries.yaml
+2025-06-12 15:15:05,991 [INFO] [START] crash_test:0 launched (pid=6443), waiting 1s...
+2025-06-12 15:15:07,000 [INFO] [OK] crash_test:0 is now running (pid=6443)
 Taskmaster CLI. Type 'help' for commands.
+taskmaster> 2025-06-12 15:15:09,009 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:09,011 [INFO] [RESTART] crash_test:0 (pid=6447)
+2025-06-12 15:15:12,040 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:12,044 [INFO] [RESTART] crash_test:0 (pid=6449)
+2025-06-12 15:15:15,238 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:15,239 [INFO] [RESTART] crash_test:0 (pid=6459)
+2025-06-12 15:15:18,300 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:18,301 [INFO] [RESTART] crash_test:0 (pid=6461)
+2025-06-12 15:15:21,599 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:21,600 [INFO] [RESTART] crash_test:0 (pid=6463)
+2025-06-12 15:15:23,605 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:23,606 [INFO] [RESTART] crash_test:0 (pid=6465)
+2025-06-12 15:15:25,612 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:25,613 [INFO] [RESTART] crash_test:0 (pid=6467)
+2025-06-12 15:15:28,632 [WARNING] [RETRY] Attempt for crash_test:0
+2025-06-12 15:15:28,633 [INFO] [RESTART] crash_test:0 (pid=6474)
 
