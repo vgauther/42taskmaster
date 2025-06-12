@@ -88,6 +88,7 @@ class Taskmaster:
                         should_restart = True
                     if should_restart:
                         if retries > 0:
+                            logger.warning(f"[RETRY] Attempt for {key}")
                             for attempt in range(retries):
                                 if self._restart_process(key, settings):
                                     break
