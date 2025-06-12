@@ -1,0 +1,10 @@
+programs:
+  echo_test:
+    cmd: "/bin/sh -c 'echo Hello from Taskmaster; sleep 30'"
+    autostart: true
+    autorestart: never
+    startsecs: 1
+    startretries: 0
+    exitcodes: [0]
+    stdout: "/tmp/echo_test_out.log"
+    stderr: "/tmp/echo_test_err.log"

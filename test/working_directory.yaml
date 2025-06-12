@@ -1,0 +1,11 @@
+programs:
+  workingdir_test:
+    cmd: "/bin/sh -c 'echo Working Directory Test > output.txt'"
+    autostart: true
+    autorestart: never
+    startsecs: 1
+    startretries: 0
+    exitcodes: [0]
+    stdout: "/tmp/workingdir_test.out"
+    stderr: "/tmp/workingdir_test.err"
+    workingdir: "/tmp/taskmaster_workingdir_test"
