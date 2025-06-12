@@ -1,0 +1,9 @@
+programs:
+  umask_test:
+    cmd: "/bin/sh -c 'touch /tmp/umask_file && ls -l /tmp/umask_file'"
+    autostart: true
+    autorestart: "never"
+    umask: "027"
+    stdout: "/tmp/umask_test.out"
+    stderr: "/tmp/umask_test.err"
+    startsecs: 1
