@@ -5,4 +5,4 @@ programs:
     autorestart: unexpected
     startretries: 3
     startsecs: 0
-    exitcodes: [0]  # Seul exit 0 est considéré comme attendu
+    exitcodes: [42]  # Seul exit 0 est considéré comme attendu
