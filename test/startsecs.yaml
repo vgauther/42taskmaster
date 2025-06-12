@@ -1,0 +1,6 @@
+programs:
+  sleeper_auto:
+    cmd: "sleep 30"
+    autostart: true   
+    numprocs: 3
+    startsecs: 5
