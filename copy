@@ -1,0 +1,6 @@
+2025-06-12 15:30:38,508 [INFO] [START] crash_test:0 launched (pid=7224), waiting 0s...
+2025-06-12 15:30:38,509 [INFO] [OK] crash_test:0 is now running (pid=7224)
+Taskmaster CLI. Type 'help' for commands.
+taskmaster> 2025-06-12 15:30:51,642 [WARNING] [RETRY] Attempt 1 for crash_test:0
+2025-06-12 15:30:51,643 [INFO] [RESTART] crash_test:0 (pid=7238)
+
