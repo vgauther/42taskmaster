@@ -1,0 +1,12 @@
+programs:
+  sleeper:
+    cmd: "/bin/sleep 60"
+    autostart: true
+    autorestart: never
+    startsecs: 1
+    startretries: 0
+    exitcodes: [0]
+    stdout: "/tmp/sleeper_out.log"
+    stderr: "/tmp/sleeper_err.log"
+    stopsignal: "INT"     # Enverra SIGINT lors du stop
+    stoptime: 3           # Attendra 3 secondes avant de forcer le kill
