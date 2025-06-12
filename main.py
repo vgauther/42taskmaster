@@ -35,23 +35,19 @@ class Taskmaster:
     def load_config(self):
         with open(self.config_path, 'r') as f:
             new_config = yaml.safe_load(f)
-
-        new_programs = new_config.get("programs", {})
-        old_programs = self.config.get("programs", {})
-
-        # Arrête les programmes qui ont été supprimés du fichier YAML
-        removed_programs = set(old_programs.keys()) - set(new_programs.keys())
-        for name in removed_programs:
-            self.stop([name])
-
-        self.config = new_config
-
-        for name, settings in new_programs.items():
-            if settings.get("autostart", False):
-                self.start([name])
+            new_programs = new_config.get("programs", {})
+            old_programs = set(self.config.get("programs", {}).keys())
+            self.config = new_config
+            new_program_keys = set(new_programs.keys())
+            # Stop programs removed from the config
+            for removed_prog in old_programs - new_program_keys:
+                self.stop([removed_prog])
+            for name, settings in new_programs.items():
+                if settings.get("autostart", False):
+                    self.start([name])
 
     def reload_config(self, *args):
-        logger.info("Reloading configuration via SIGHUP...")
+        logger.info("Reloading configuration via SIGHUP or command...")
         self.load_config()
         logger.info("Configuration reloaded.")
         print("taskmaster> ", end="", flush=True)
@@ -79,7 +75,7 @@ class Taskmaster:
                 proc = self.processes[key]
                 if proc.poll() is not None:
                     name, idx = key.split(":")
-                    settings = self.config["programs"].get(name, {})
+                    settings = self.config["programs"][name]
                     exitcodes = settings.get("exitcodes", [0])
                     autorestart = settings.get("autorestart", "never")
                     retries = settings.get("startretries", 0)
@@ -245,8 +241,10 @@ class Taskmaster:
                     self.restart(args)
                 elif cmd == "status":
                     self.status()
+                elif cmd == "reload":
+                    self.reload_config()
                 elif cmd == "help":
-                    print("Commands: start <name>, stop <name>, restart <name>, status, exit")
+                    print("Commands: start <name>, stop <name>, restart <name>, status, reload, exit")
                 else:
                     logger.error(f"Unknown command '{cmd}'.")
             except (EOFError, KeyboardInterrupt):

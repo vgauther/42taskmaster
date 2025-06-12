@@ -1,0 +1,22 @@
+programs:
+  sleep_restart:
+    cmd: "sleep 100"
+    numprocs: 1
+    workingdir: /tmp
+    autostart: true
+    autorestart: always
+  sleep_stop:
+    cmd: "sleep 100"
+    numprocs: 1
+    workingdir: /tmp
+    autostart: true
+    autorestart: always
+  sleep_unexpected:
+    cmd: "sleep 100"
+    numprocs: 1
+    workingdir: /tmp
+    autostart: true
+    autorestart: unexpected
+    exitcodes: [0,2]
+
+
