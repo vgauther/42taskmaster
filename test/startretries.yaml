@@ -1,8 +1,8 @@
 programs:
-  read_missing_file:
-    cmd: "/bin/sh -c 'cat /tmp/nonexistent_file.txt'"
+  crash_test:
+    cmd: "/bin/sh -c 'cat /file/that/does/not/exist'"
     autostart: true
-    autorestart: never        # On ne redémarre pas en boucle infinie
-    startretries: 3           # Tente 3 fois au démarrage
-    startsecs: 0
+    autorestart: unexpected
+    startsecs: 1
+    startretries: 3
     exitcodes: [0]
