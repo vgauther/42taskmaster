@@ -70,6 +70,10 @@ class Taskmaster:
             if not os.path.exists(path):
                 open(path, 'a').close()
 
+    def ensure_working_dir(self, path):
+        if path:
+            os.makedirs(path, exist_ok=True)
+
     def monitor_processes(self):
         while True:
             for key in list(self.processes.keys()):
@@ -123,6 +127,7 @@ class Taskmaster:
                 env = os.environ.copy()
                 env.update(settings.get("env", {}))
                 workingdir = settings.get("workingdir", None)
+                self.ensure_working_dir(workingdir)
                 new_proc = subprocess.Popen(
                     shlex.split(settings["cmd"]),
                     stdout=stdout,
@@ -169,6 +174,7 @@ class Taskmaster:
                     env = os.environ.copy()
                     env.update(settings.get("env", {}))
                     workingdir = settings.get("workingdir", None)
+                    self.ensure_working_dir(workingdir)
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=stdout,
