@@ -183,6 +183,9 @@ class Taskmaster:
                 time.sleep(startsecs)
                 if proc.poll() is not None:
                     logger.warning(f"[FAIL] {key} exited too soon (code={proc.returncode})")
+                    self.processes[key] = proc
+                    self.retry_count[key] = 1
+                    self.started_ok[key] = False
                     continue
                 self.processes[key] = proc
                 self.retry_count[key] = 0
