@@ -1,0 +1,8 @@
+programs:
+  read_missing_file:
+    cmd: "/bin/sh -c 'cat /tmp/nonexistent_file.txt'"
+    autostart: true
+    autorestart: unexpected
+    startretries: 3
+    startsecs: 0
+    exitcodes: [0]  # Seul exit 0 est considéré comme attendu
