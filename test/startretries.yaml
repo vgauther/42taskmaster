@@ -1,6 +1,6 @@
 programs:
   crash_test:
-    cmd: "/bin/sh -c 'sleep 2 && exit 0'"
+    cmd: "sleep 60"
     autostart: true
     autorestart: always
     startsecs: 0
