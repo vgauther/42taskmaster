@@ -1,9 +1,9 @@
 programs:
   sleeper_auto:
-    cmd: "sleep 60"
+    cmd: "sleep 30"
     autostart: true   
     numprocs: 1
   sleeper_manual:
-    cmd: "sleep 60"
+    cmd: "sleep 30"
     autostart: false   
     numprocs: 1

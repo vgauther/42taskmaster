@@ -1,18 +1,18 @@
 programs:
   sleep_restart:
-    cmd: "sleep 100"
+    cmd: "sleep 30"
     numprocs: 1
     workingdir: /tmp
     autostart: true
     autorestart: always
   sleep_stop:
-    cmd: "sleep 100"
+    cmd: "sleep 30"
     numprocs: 1
     workingdir: /tmp
     autostart: true
-    autorestart: always
+    autorestart: never
   sleep_unexpected:
-    cmd: "sleep 100"
+    cmd: "sleep 30"
     numprocs: 1
     workingdir: /tmp
     autostart: true
