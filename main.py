@@ -24,6 +24,7 @@ class Taskmaster:
     def __init__(self, config_path):
         self.config_path = config_path
         self.processes = {}  # Clé : "name:index", Valeur : Popen
+        self.retry_count = {}  # Clé : "name:index", Valeur : nombre de tentatives
         self.config = {}
         load_dotenv()  # Chargement des variables d'environnement depuis un .env si présent
         self.load_config()
@@ -87,17 +88,20 @@ class Taskmaster:
                     elif autorestart == "unexpected" and not is_expected_exit:
                         should_restart = True
                     if should_restart:
-                        if retries > 0:
-                            logger.warning(f"[RETRY] Attempt for {key}")
-                            for attempt in range(retries):
-                                if self._restart_process(key, settings):
-                                    break
+                        current_retry = self.retry_count.get(key, 0)
+                        if current_retry < retries:
+                            logger.warning(f"[RETRY] Attempt {current_retry + 1} for {key}")
+                            self.retry_count[key] = current_retry + 1
+                            if not self._restart_process(key, settings):
                                 time.sleep(1)
                         else:
-                            self._restart_process(key, settings)
+                            logger.error(f"[GIVEUP] {key} reached max retries ({retries})")
+                            del self.processes[key]
+                            self.retry_count.pop(key, None)
                     else:
                         logger.info(f"{key} exited with code {retcode} (expected={is_expected_exit})")
                         del self.processes[key]
+                        self.retry_count.pop(key, None)
             time.sleep(1)
 
     def _restart_process(self, key, settings):
@@ -175,6 +179,7 @@ class Taskmaster:
                     logger.warning(f"[FAIL] {key} exited too soon (code={proc.returncode})")
                     continue
                 self.processes[key] = proc
+                self.retry_count[key] = 0  # Reset retry count on successful start
                 logger.info(f"[OK] {key} is now running (pid={proc.pid})")
             except Exception as e:
                 logger.error(f"Failed to start '{key}': {e}")
@@ -204,6 +209,7 @@ class Taskmaster:
                 else:
                     logger.info(f"[INFO] {key} is not running.")
                 del self.processes[key]
+                self.retry_count.pop(key, None)
 
     def restart(self, args):
         self.stop(args)
