@@ -1,8 +1,10 @@
 programs:
   crash_test:
-    cmd: "/bin/sh -c 'cat /file/that/does/not/exist'"
+    cmd: "/bin/sh -c 'sleep 2 && exit 1'"
     autostart: true
     autorestart: unexpected
     startsecs: 1
     startretries: 3
     exitcodes: [0]
+    stdout: "/tmp/crash_test.out"
+    stderr: "/tmp/crash_test.err"
