@@ -1,0 +1,5 @@
+➜  42taskmaster git:(main) ✗ python3 main.py test/startretries.yaml
+2025-06-12 14:59:03,493 [INFO] [START] crash_test:0 launched (pid=2739), waiting 1s...
+2025-06-12 14:59:04,494 [WARNING] [FAIL] crash_test:0 exited too soon (code=1)
+Taskmaster CLI. Type 'help' for commands.
+
